@@ -8,6 +8,9 @@ TagManager:
   - Ice
   - outofBounds
   - death
+  - win
+  - crystalk
+  - crystal
   layers:
   - Default
   - TransparentFX
@@ -40,7 +43,7 @@ TagManager:
   - 
   - 
   - 
-  - 
+  - Foreground
   m_SortingLayers:
   - name: Default
     uniqueID: 0

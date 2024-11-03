@@ -29,6 +29,8 @@ public class plyrMov : MonoBehaviour
     public int atBase;
 
     [Header("Grounded-Stuff")]
+    public float fastFallGravityScale;
+    public float normalGravityScale;
     public bool isGrounded;
     public bool canFastFall;
     public bool canJump;
@@ -46,10 +48,13 @@ public class plyrMov : MonoBehaviour
     public int iceSpeed;
     public float iceCheckRadius;
     public float iceAccelRate, iceAccel;
+    public bool canRegenMeter;
 
     [Header("Game over stuff")]
     public GameObject gameOverUI;
     public bool gameOver;
+    public bool gameWon;
+    public GameObject winUI;
 
     void Start()
     {
@@ -57,6 +62,12 @@ public class plyrMov : MonoBehaviour
         iceAccel = 0;
         plyrAccel = 1f;
         atBase = 0;
+        normalGravityScale = theRB.gravityScale;
+
+        if (winUI != null)
+        {
+            winUI.SetActive(false);
+        }
 
         if (gameOverUI != null)
         {
@@ -73,7 +84,7 @@ public class plyrMov : MonoBehaviour
         theRB.velocity = new Vector2(horizontalInput * (plyrMovSpd * plyrAccel), theRB.velocity.y);
         isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
         canSlide = Physics2D.OverlapCircle(playerSprite.position, iceCheckRadius, iceLayer);
-
+    
         if (canSlide)
         {
             iceAccel = iceAccelRate;
@@ -83,7 +94,7 @@ public class plyrMov : MonoBehaviour
             iceAccel = 0;
         }
 
-        if (gameOver)
+        if (gameOver || gameWon)
         {
             if (Input.GetKeyDown(KeyCode.Space))
             {
@@ -118,6 +129,10 @@ public class plyrMov : MonoBehaviour
             canJump = false;
             isJumping = false;
         }
+        else
+        {
+            theRB.gravityScale = normalGravityScale;
+        }
 
         if (Input.GetKeyUp(KeyCode.Space))
         {
@@ -136,12 +151,30 @@ public class plyrMov : MonoBehaviour
         {
             TriggerGameOver();
         }
+
+        if (other.CompareTag("win"))
+        {
+            TriggerGameWin();
+        }
+    }
+
+    void OnTriggerStay2D(Collider2D other)
+    {
+        if (other.CompareTag("crystal"))
+        {
+            Debug.Log("They're in da zone!");
+            canRegenMeter = true;
+        }
+        else
+        {
+            canRegenMeter = false;
+        }
     }
 
     public void FastFall()
     {
         Debug.Log("Fall!");
-        theRB.velocity = new Vector2(theRB.velocity.x, theRB.velocity.y - fallForce);
+        theRB.gravityScale = fastFallGravityScale;
     }
 
     public void StopJumpMomentum()
@@ -187,6 +220,16 @@ public class plyrMov : MonoBehaviour
         Debug.Log("Closest index is " + closestIndex);
 
         return closestIndex;
+    }
+
+    public void TriggerGameWin()
+    {
+        if (!gameWon)
+        {
+            gameWon = true;
+            Time.timeScale = 0f;
+            winUI.SetActive(true);
+        }
     }
 
     public void TriggerGameOver()

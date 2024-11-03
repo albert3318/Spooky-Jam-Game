@@ -4,11 +4,11 @@ using UnityEngine;
 
 public class movingBlock : MonoBehaviour
 {
-    Rigidbody2D theRB;
     GameObject self;
     Camera theCamera;
-    int horizRate;
-    int vertRate;
+    public Rigidbody2D theRB;
+    public int horizRate;
+    public float vertRate;
     // Start is called before the first frame update
     void Start()
     {
@@ -16,8 +16,8 @@ public class movingBlock : MonoBehaviour
     }
 
     // Update is called once per frame
-    void Update()
+    void FixedUpdate()
     {
-        
+        theRB.position = new Vector2(theRB.position.x, theRB.position.y + vertRate);
     }
 }

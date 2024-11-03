@@ -5,12 +5,15 @@ using UnityEngine;
 public class LineGenerator : MonoBehaviour
 {
     public GameObject linePrefab;
+    public Rigidbody2D playerRB;
+    public plyrMov player;
     public Line activeLine;
     public LineRenderer activeLineRenderer;
     public float meter;
     public float meterMax;
     public float regenRate;
     public bool pressingMouse;
+    public bool canRegenMeter;
 
     // Update is called once per frame
     void Update()
@@ -28,7 +31,7 @@ public class LineGenerator : MonoBehaviour
             meter -= activeLineRenderer.positionCount * Time.deltaTime;
         }
 
-        if (activeLine == null && meter < meterMax)
+        if (activeLine == null && meter < meterMax && player.canRegenMeter)
         {
             meter += regenRate * Time.deltaTime;
         }
