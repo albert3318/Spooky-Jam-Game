@@ -1,6 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
+
 
 public class plyrMov : MonoBehaviour
 {
@@ -15,7 +17,11 @@ public class plyrMov : MonoBehaviour
     public float accelRate;
     public float plyrAccel;
     public float accelMax;
+    public float airJumpAssist;
     public float jumpForce;
+    public float keyReleaseOffset;
+    public float jumpTimeCounter;
+    public float maxJumpTime;
     public float fallForce;
     public float distanceToWall;
     float horizontalInput;
@@ -24,6 +30,9 @@ public class plyrMov : MonoBehaviour
 
     [Header("Grounded-Stuff")]
     public bool isGrounded;
+    public bool canFastFall;
+    public bool canJump;
+    public bool isJumping;
     public Transform groundCheck;
     public Transform playerSprite;
     public float groundCheckRadius;
@@ -38,12 +47,21 @@ public class plyrMov : MonoBehaviour
     public float iceCheckRadius;
     public float iceAccelRate, iceAccel;
 
+    [Header("Game over stuff")]
+    public GameObject gameOverUI;
+    public bool gameOver;
+
     void Start()
     {
         theRB.freezeRotation = true;
         iceAccel = 0;
         plyrAccel = 1f;
         atBase = 0;
+
+        if (gameOverUI != null)
+        {
+            gameOverUI.SetActive(false);
+        }
     }
 
     // Update is called once per frame
@@ -65,6 +83,14 @@ public class plyrMov : MonoBehaviour
             iceAccel = 0;
         }
 
+        if (gameOver)
+        {
+            if (Input.GetKeyDown(KeyCode.Space))
+            {
+                TriggerGameRestart();
+            }
+        }
+
         if (horizontalInput > 0 && plyrAccel < accelMax)
         {
             plyrAccel += (accelRate + iceAccel) * Time.deltaTime;
@@ -73,14 +99,32 @@ public class plyrMov : MonoBehaviour
         {
             plyrAccel -= (accelRate + iceAccel) * Time.deltaTime;
         }
-        
-        if (Input.GetKeyDown(KeyCode.Space) && (isGrounded || canSlide))
+
+        if ((isGrounded || canSlide))
         {
+            canFastFall = false;
+            canJump = true;
+        }
+        else
+        {
+            canFastFall = true;
+        }
+        
+        if (Input.GetKeyDown(KeyCode.Space) && canJump)
+        {
+            isJumping = true;
             Debug.Log("This is working");
             Jump();
+            canJump = false;
+            isJumping = false;
         }
 
-        if (verticalInput < 0)
+        if (Input.GetKeyUp(KeyCode.Space))
+        {
+            StopJumpMomentum();
+        }
+
+        if (verticalInput < 0 && canFastFall && !isJumping)
         {
             FastFall();
         }
@@ -88,58 +132,9 @@ public class plyrMov : MonoBehaviour
 
     void OnTriggerEnter2D(Collider2D other)
     {
-        if (other.CompareTag("Ice"))
+        if (other.CompareTag("death"))
         {
-            Debug.Log("You're on Ice!");
-            lineRenderer = other.GetComponent<LineRenderer>();
-            currentPointIndex = GetClosestIndex();
-
-            if (lineRenderer != null)
-            {
-                Debug.Log("Found a LineRenderer on" + other.name);
-            }
-        }
-    }
-
-    void OnTriggerStay2D(Collider2D other)
-    {   
-
-        if (other.CompareTag("Ice") && lineRenderer != null)
-        {
-            canSlide = true;
-            iceAccel = iceAccelRate;
-
-            if (currentPointIndex >= lineRenderer.positionCount)
-            {
-                return;
-            }
-            Vector2 targetPosition = lineRenderer.GetPosition(currentPointIndex);
-            Debug.Log("Target position is " + targetPosition);
-            Vector2 direction = (targetPosition - theRB.position).normalized;
-            Debug.Log("Direction is " + direction);
-            theRB2.AddForce((direction * iceSpeed) * Time.deltaTime, ForceMode2D.Force);
-            float distance = Vector2.Distance(theRB.position, lineRenderer.GetPosition(lineRenderer.positionCount - 1));
-            if (distance < 0.1f)
-            {
-                currentPointIndex++;
-                if (currentPointIndex >= lineRenderer.positionCount)
-                {
-                    currentPointIndex = lineRenderer.positionCount - 1; // Stay on last point if exceeded
-                }
-            }
-
-            
-        }
-    }
-
-    void OnTriggerExit2D(Collider2D other)
-    {
-        if (other.CompareTag("Ice"))
-        {
-            canSlide = false; // Reset sliding state
-            lineRenderer = null; // Clear reference to LineRenderer
-            currentPointIndex = 0; // Optionally reset index
-            Debug.Log("Exited Ice");
+            TriggerGameOver();
         }
     }
 
@@ -148,9 +143,23 @@ public class plyrMov : MonoBehaviour
         Debug.Log("Fall!");
         theRB.velocity = new Vector2(theRB.velocity.x, theRB.velocity.y - fallForce);
     }
+
+    public void StopJumpMomentum()
+    {
+        theRB.velocity = new Vector2(theRB.velocity.x, theRB.velocity.y - keyReleaseOffset);
+    }
     public void Jump()
     {
-        theRB.velocity = new Vector2(theRB.velocity.x, theRB.velocity.y + jumpForce);
+        if (isGrounded)
+        {
+            theRB.velocity = new Vector2(theRB.velocity.x, theRB.velocity.y + jumpForce);
+        }
+        else if (!isGrounded)
+        {
+            theRB.velocity = new Vector2(theRB.velocity.x, theRB.velocity.y + (jumpForce+airJumpAssist));
+        }
+
+        canJump = false;
     }
 
     public void IceJump()
@@ -178,6 +187,23 @@ public class plyrMov : MonoBehaviour
         Debug.Log("Closest index is " + closestIndex);
 
         return closestIndex;
+    }
+
+    public void TriggerGameOver()
+    {
+        if (!gameOver)
+        {
+            gameOver = true;
+            Time.timeScale = 0f;
+            gameOverUI.SetActive(true);
+
+        }
+    }
+
+    public void TriggerGameRestart()
+    {
+        Time.timeScale = 1f;
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
 }
